@@ -74,7 +74,7 @@ cog.out(f"```\n{help}\n```")
 ]]] -->
 ```bash
 
-deb-get {update [--repos-only] [--quiet] | upgrade | show <pkg list> | install <pkg list>
+deb-get {update [--repos-only] [--quiet] | upgrade [--dg-only] | show <pkg list> | install <pkg list>
         | reinstall <pkg list> | remove [--remove-repo] <pkg list>
         | purge [--remove-repo] <pkg list>
         | search [--include-unsupported] <regex> | cache | clean
