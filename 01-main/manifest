@@ -74,6 +74,8 @@ element-desktop
 emby-server
 emptyepsilon
 enpass
+espanso
+espanso-wayland
 eversticky
 exifcleaner
 #expressvpn
@@ -94,6 +96,7 @@ flameshot
 flowkeeper
 foliate
 franz
+freeplane
 freeshow
 frostwire
 fsearch
@@ -156,6 +159,7 @@ jellyfin-media-player
 jexiftoolgui
 jitsi-meet-electron
 jupyterlab-desktop
+k9s
 kapacitor
 kdiskmark
 keepassxc
@@ -239,6 +243,7 @@ pdfsam-visual
 peazip
 pet
 picocrypt-gui
+pixieditor
 plexmediaserver
 plow
 polychromatic
@@ -314,6 +319,7 @@ thinlinc-client
 thorium-browser
 ticktick
 tidal-hifi
+tinygo
 tixati
 tofu
 tonelib-bassdrive
