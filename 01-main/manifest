@@ -21,6 +21,7 @@ bat
 battery-monitor
 beekeeper-studio
 beersmith3
+beszel-agent
 bitwarden
 bitwig-studio
 blanket
@@ -92,6 +93,7 @@ firefox-beta
 firefox-devedition
 firefox-esr
 firefox-nightly
+firefoxpwa
 flameshot
 flowkeeper
 foliate
@@ -119,6 +121,7 @@ google-chrome-stable
 google-chrome-unstable
 google-cloud-cli
 google-earth-pro-stable
+goose
 goreleaser
 goreleaser-pro
 gotop
@@ -174,6 +177,7 @@ libation
 libreoffice
 librewolf
 linux-assistant
+linuxtoys
 limoji
 localsend
 lsd
@@ -204,6 +208,7 @@ mullvad-browser
 mullvad-vpn
 multimc
 museeks
+musicplayerplus
 musikcube
 nala
 #nala-legacy
@@ -211,6 +216,7 @@ nekoray
 nemo-mediainfo-tab
 neo4j
 neo-htop
+net.downloadhelper.coapp
 nextcloud-desktop
 nodejs
 nomad
@@ -253,6 +259,7 @@ portmaster
 powershell
 protonmail-bridge
 protonvpn
+proton-pass
 publii
 pulsar
 pulse-sms
@@ -263,6 +270,7 @@ quickgui
 quickobs
 rambox
 rclone
+readest
 resilio-sync
 retroarch
 ripgrep
@@ -311,8 +319,10 @@ teams-for-linux
 teamviewer
 teip
 telegraf
+television
 termius-app
 terraform
+terratactician-expandoria
 texworks
 tezos-baking
 thinlinc-client

@@ -165,7 +165,7 @@ function get_github_releases() {
     #   curl -I https://api.github.com/users/flexiondotorg
 
     # Do not process github releases while generating a pretty list or upgrading
-    if [[ ' install update fix-installed ' =~ " ${ACTION} " ]]; then
+    if [[ ' install fix-installed ' =~ " ${ACTION} " ]] || { [[ ' update ' =~ " ${ACTION} " ]] && package_is_installed "${APP}"; }; then
         if [ ! -e "${CACHE_FILE}" ] || [ -n "$(find "${CACHE_FILE}" -mmin +"${DEBGET_CACHE_RTN:-60}")" ]; then
             fancy_message info "Updating ${CACHE_FILE}"
             local URL="https://api.github.com/repos/${1}/releases${2:+/$2}"
@@ -194,7 +194,7 @@ function get_gitlab_releases() {
     # So for gitlab sourced apps that use this release model users can use 99-local to pin a version
     #
 
-    if [[ ' install update fix-installed ' =~ " ${ACTION} " ]]; then
+    if [[ ' install fix-installed ' =~ " ${ACTION} " ]] || { [[ ' update ' =~ " ${ACTION} " ]] && package_is_installed "${APP}"; }; then
         if [ ! -e "${CACHE_FILE}" ] || [ -n "$(find "${CACHE_FILE}" -mmin +"${DEBGET_CACHE_RTN:-60}")" ]; then
             fancy_message info "Updating ${CACHE_FILE}"
             RELEASE=${2/%latest/permalink/latest}
@@ -221,7 +221,7 @@ function get_gitlab_releases() {
 function get_website() {
     METHOD="website"
     CACHE_FILE="${CACHE_DIR}/${APP}.html"
-    if [[ ' install update fix-installed ' =~ " ${ACTION} " ]]; then
+    if [[ ' install fix-installed ' =~ " ${ACTION} " ]] || { [[ ' update ' =~ " ${ACTION} " ]] && package_is_installed "${APP}"; }; then
         if [ ! -e "${CACHE_FILE}" ] || [ -n "$(find "${CACHE_FILE}" -mmin +"${DEBGET_CACHE_RTN:-60}")" ]; then
             fancy_message info "Updating ${CACHE_FILE}"
             # shellcheck disable=SC2086
@@ -1171,6 +1171,12 @@ function remove_old_ppa_repo() {
 }
 
 function remove_repo() {
+    if [[ -n "${PPA}" ]]; then
+        local -r PPA_ADDRESS=${PPA#*:}
+        local -r PPA_PERSON=${PPA_ADDRESS%%/*}
+        local -r PPA_ARCHIVE=${PPA_ADDRESS#*/}
+        APT_LIST_NAME="${PPA_PERSON}-ubuntu-${PPA_ARCHIVE}-${UPSTREAM_CODENAME}"
+    fi
     local count=""
     if [ -e "${ETC_DIR}/aptrepos" ]; then
         count="$(grep -m 1 "^${APT_LIST_NAME} " "${ETC_DIR}/aptrepos" | cut -d " " -f 2)"
@@ -1203,21 +1209,23 @@ function remove_repo() {
 }
 
 function add_apt_repo() {
-    local count=""
-    if [ -e "${ETC_DIR}/aptrepos" ]; then
-        count="$(grep -m 1 "^${APT_LIST_NAME} " "${ETC_DIR}/aptrepos" | cut -d " " -f 2)"
-    fi
-    if [ -z "${count}" ]; then
-        count=0
-    fi
-    if [ "${count}" -eq 0 ] && [ -e "/etc/apt/sources.list.d/${APT_LIST_NAME}.list" ]; then
+    if [[ "${ACTION}" != "reinstall" ]]; then
+        local count=""
+        if [ -e "${ETC_DIR}/aptrepos" ]; then
+            count="$(grep -m 1 "^${APT_LIST_NAME} " "${ETC_DIR}/aptrepos" | cut -d " " -f 2)"
+        fi
+        if [ -z "${count}" ]; then
+            count=0
+        fi
+        if [ "${count}" -eq 0 ] && [ -e "/etc/apt/sources.list.d/${APT_LIST_NAME}.list" ]; then
+            ((count++))
+        fi
         ((count++))
+        if [ -e "${ETC_DIR}/aptrepos" ]; then
+            ${ELEVATE} sed -i -E "/^${APT_LIST_NAME} [0-9]+/d" "${ETC_DIR}/aptrepos"
+        fi
+        ${ELEVATE} tee -a "${ETC_DIR}/aptrepos" <<<"${APT_LIST_NAME} ${count}" >/dev/null
     fi
-    ((count++))
-    if [ -e "${ETC_DIR}/aptrepos" ]; then
-        ${ELEVATE} sed -i -E "/^${APT_LIST_NAME} [0-9]+/d" "${ETC_DIR}/aptrepos"
-    fi
-    ${ELEVATE} tee -a "${ETC_DIR}/aptrepos" <<<"${APT_LIST_NAME} ${count}" >/dev/null
     if [ ! -d /usr/share/keyrings ]; then
         ${ELEVATE} mkdir -p /usr/share/keyrings 2>/dev/null
     fi
@@ -1333,6 +1341,7 @@ esac
 OS_ID=$(lsb_release --id --short)
 case "${OS_ID}" in
   Debian) OS_ID_PRETTY="Debian";;
+  Devuan) OS_ID_PRETTY="Devuan";;
   elementary|Elementary) OS_ID_PRETTY="elementary OS";;
   Linuxmint) OS_ID_PRETTY="Linux Mint";;
   Neon) OS_ID_PRETTY="KDE Neon";;
@@ -1370,11 +1379,19 @@ if ! [[ ' ubuntu debian ' =~ " ${UPSTREAM_ID} " ]]; then
     fi
 fi
 
-# Debian Sid doesn't have it's own unique os-release file. It is the same as Debian stable.
-# So we first check /etc/debian_version to see if we're running sid. If not, we will trust what os-release says.
-if [[ "${UPSTREAM_ID}" == "debian" ]] && grep -q "sid" /etc/debian_version; then
-    UPSTREAM_CODENAME="sid"
-    OS_CODENAME="sid"
+# Debian Sid & Testing don't always have their own unique os-release file. It is often the same as the previous Debian stable.
+# So we first check /etc/debian_version to make sure we're not running Stable.
+# If not, we will then use apt-cache policy to distinguish between Debian Sid and Debian Testing.
+local ETC_DEB_VER="$(< /etc/debian_version)"
+if [[ "${UPSTREAM_ID}" == "debian" ]] && grep -q "sid" <<< "${ETC_DEB_VER}"; then
+    if apt-cache policy | grep -q -i -e "o=debian.*n=${ETC_DEB_VER%%/*}" -e "o=debian.*n=testing"; then
+        UPSTREAM_CODENAME="${ETC_DEB_VER%%/*}"
+        OS_CODENAME="${UPSTREAM_CODENAME}"
+        DEBIAN_TESTING="${UPSTREAM_CODENAME}"
+    else
+        UPSTREAM_CODENAME="sid"
+        OS_CODENAME="sid"
+    fi
 else
     local codename
     for codename in UBUNTU_CODENAME DEBIAN_CODENAME VERSION_CODENAME; do
@@ -1397,7 +1414,18 @@ case "${UPSTREAM_CODENAME}" in
     plucky)   UPSTREAM_RELEASE="25.04";;
     questing) UPSTREAM_RELEASE="25.10";;
 
-    *) fancy_message fatal "${OS_ID_PRETTY} ${OS_CODENAME^} is not supported because it is not derived from a supported Debian or Ubuntu release.";;
+    *)  #Devuan
+        if [[ "${UPSTREAM_ID}" == "debian" ]]; then
+            UPSTREAM_RELEASE="$(grep -E -o -m 1 "^[0-9]+" "/etc/debian_version")"
+        fi
+        case "${UPSTREAM_RELEASE}" in
+            10) UPSTREAM_CODENAME="buster";;
+            11) UPSTREAM_CODENAME="bullseye";;
+            12) UPSTREAM_CODENAME="bookworm";;
+            13) UPSTREAM_CODENAME="trixie";;
+            14) UPSTREAM_CODENAME="forky";;
+             *) fancy_message fatal "${OS_ID_PRETTY} ${OS_CODENAME^} is not supported because it is not derived from a supported Debian or Ubuntu release.";;
+        esac
 esac
 }
 
